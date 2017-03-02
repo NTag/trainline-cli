@@ -42,6 +42,44 @@ function arrToObj(arr) {
 }
 
 /**
+ * Retrieve complete trips, folders information
+ * @return Promise()
+ */
+function getPnrs() {
+  return apiRequest('pnrs', 'GET').then(infos => {
+    let stations = arrToObj(infos.stations);
+    let passengers = arrToObj(infos.passengers);
+    let folders = arrToObj(infos.folders);
+    let pnrs = arrToObj(infos.pnrs);
+
+    infos.trips.forEach(trip => {
+      trip.arrival_station = stations[trip.arrival_station_id];
+      trip.departure_station = stations[trip.departure_station_id];
+      trip.passenger = passengers[trip.passenger_id];
+      trip.reference = pnrs[folders[trip.folder_id].pnr_id].code;
+      trip.booking_status = pnrs[folders[trip.folder_id].pnr_id].booking_status;
+    });
+
+    return infos;
+  });
+}
+
+/**
+ * Return the booked or emitted trips
+ * @param status string 'booked' or 'emitted'
+ * @return Promise([{arrival_date, departure_date, arrival_station, departure_station, cents}])
+ */
+function tripsWithBookingStatus(status) {
+  return getPnrs().then(infos => {
+    let trips = infos.trips.filter(trip => {
+      return trip.booking_status == status;
+    });
+
+    return trips;
+  });
+}
+
+/**
  * Try to connect the user with email and password
  * @param email string
  * @param password string
@@ -57,30 +95,19 @@ trainline.connexion = function (email, password) {
 };
 
 /**
- * List of the user's trips
+ * List of the user's emitted trips
  * @return Promise([{arrival_date, departure_date, arrival_station, departure_station, cents}])
  */
 trainline.trips = function() {
-  return apiRequest('pnrs', 'GET').then(infos => {
-    let stations = arrToObj(infos.stations);
-    let passengers = arrToObj(infos.passengers);
-    let folders = arrToObj(infos.folders);
-    let pnrs = arrToObj(infos.pnrs);
+  return tripsWithBookingStatus('emitted');
+};
 
-    infos.trips.forEach(trip => {
-      trip.arrival_station = stations[trip.arrival_station_id];
-      trip.departure_station = stations[trip.departure_station_id];
-      trip.passenger = passengers[trip.passenger_id];
-      trip.reference = pnrs[folders[trip.folder_id].pnr_id].code;
-    });
-
-    // Only the booked trips
-    let trips = infos.trips.filter(trip => {
-      return pnrs[folders[trip.folder_id].pnr_id].booking_status == 'emitted';
-    });
-
-    return trips;
-  });
+/**
+ * User's basket (list of booked trips)
+ * @return Promise([{arrival_date, departure_date, arrival_station, departure_station, cents}])
+ */
+trainline.basket = function() {
+  return tripsWithBookingStatus('booked');
 };
 
 module.exports = trainline;

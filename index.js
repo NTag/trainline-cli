@@ -38,6 +38,7 @@ program
   .option('-l, --login [email]', 'Log in to your Trainline account')
   .option('-L, --logout', 'Logout of your Trainline account')
   .option('-t, --trips', 'List of your trips')
+  .option('-b, --basket', 'List of your options')
   .parse(process.argv);
 
 function main() {
@@ -84,30 +85,46 @@ function main() {
   if (program.trips) {
     console.log('List of your trips');
     trainline.trips().then(trips => {
-      let table = new Table({
-        style: { 'padding-left': 0 }
-      });
-
-      trips.slice(0, 7).forEach(trip => {
-        let reference = trip.reference;
-
-        let departure_date = moment(trip.departure_date).calendar();
-        let arrival_date = moment(trip.arrival_date).calendar();
-        let date = departure_date;
-        if (departure_date != arrival_date) {
-          date += '\n' + arrival_date;
-        }
-
-        let stations = trip.departure_station.name + '\n' + trip.arrival_station.name;
-
-        let passenger = trip.passenger.first_name;
-
-        let price = {hAlign: 'right', content: trip.cents/100 + ' ' + trip.currency};
-
-        table.push([reference, date, stations, passenger, price]);
-      });
-
-      console.log(table.toString());
+      console.log(tripsToTable(trips.slice(0, 7)));
     });
   }
+
+  if (program.basket) {
+    console.log('Content of your basket');
+    trainline.basket().then(trips => {
+      console.log(tripsToTable(trips));
+    });
+  }
+}
+
+/**
+ * Create a table from an array of trips
+ * @param trips array List of trips
+ * @return string The table to display
+ */
+function tripsToTable(trips) {
+  let table = new Table({
+    style: { 'padding-left': 0 }
+  });
+
+  trips.forEach(trip => {
+    let reference = trip.reference;
+
+    let departure_date = moment(trip.departure_date).calendar();
+    let arrival_date = moment(trip.arrival_date).calendar();
+    let date = departure_date;
+    if (departure_date != arrival_date) {
+      date += '\n' + arrival_date;
+    }
+
+    let stations = trip.departure_station.name + '\n' + trip.arrival_station.name;
+
+    let passenger = trip.passenger.first_name;
+
+    let price = {hAlign: 'right', content: trip.cents/100 + ' ' + trip.currency};
+
+    table.push([reference, date, stations, passenger, price]);
+  });
+
+  return table.toString();
 }
