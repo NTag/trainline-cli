@@ -1,7 +1,9 @@
 const request = require('request-promise');
 const API = 'https://www.trainline.eu/api/v5/';
 
-let trainline = {};
+let trainline = {
+  TOKEN: null
+};
 
 function apiRequest(url, method, body) {
   let options = {
