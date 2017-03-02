@@ -7,8 +7,10 @@
   "author": "Basile Bruneau <basilebruneau@gmail.com>",
   "license": "GPL-2.0",
   "dependencies": {
+    "cli-table2": "^0.2.0",
     "colors": "^1.1.2",
     "commander": "^2.9.0",
+    "moment": "^2.17.1",
     "node-persist": "^2.0.8",
     "prompt": "^1.0.0",
     "request": "^2.79.0",
