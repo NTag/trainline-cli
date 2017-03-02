@@ -1,0 +1,16 @@
+{
+  "name": "trainline-cli",
+  "version": "1.0.0",
+  "description": "CLI for Trainline",
+  "main": "index.js",
+  "repository": "git@github.com:NTag/trainline-cli.git",
+  "author": "Basile Bruneau <basilebruneau@gmail.com>",
+  "license": "GPL-2.0",
+  "dependencies": {
+    "colors": "^1.1.2",
+    "commander": "^2.9.0",
+    "prompt": "^1.0.0",
+    "request": "^2.79.0",
+    "request-promise": "^4.1.1"
+  }
+}
