@@ -119,4 +119,25 @@ trainline.searchStation = function(query) {
   return apiRequest('stations?context=search&q=' + encodeURI(query)).then(o => o.stations);
 };
 
+/**
+ * Search for trips
+ * @param departure_station_id string The id of the departure station
+ * @param arrival_station_id string The id of the arrival station
+ * @param passenger_ids array(string) The ids of the passengers
+ * @param departure_date string The departure date
+ * @return array({})
+ */
+trainline.searchTrips = function(departure_station_id, arrival_station_id, passenger_ids, departure_date) {
+  let body = {
+    search: {
+      arrival_station_id: arrival_station_id,
+      departure_date: departure_date,
+      departure_station_id: departure_station_id,
+      passenger_ids: passenger_ids,
+      systems: ["sncf", "db", "busbud", "idtgv", "ouigo", "trenitalia", "ntv", "hkx", "renfe", "benerail", "ocebo", "timetable"]
+    }
+  };
+  return apiRequest('search', 'POST', body);
+};
+
 module.exports = trainline;

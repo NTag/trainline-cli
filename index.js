@@ -138,7 +138,7 @@ function main() {
       },
       {
         type: 'checkbox',
-        name: 'passengers',
+        name: 'passenger_ids',
         message: 'Passengers:',
         choices: uinfos.passengers.map(passenger => {
           return {
@@ -152,8 +152,19 @@ function main() {
       }
     ]).then(answers => {
       // We need to find the ids of the selected stations
-      // We need to format the date
-      console.log(JSON.stringify(answers, null, 2));
+      let sq1 = trainline.searchStation(answers.from);
+      let sq2 = trainline.searchStation(answers.to);
+      return Promise.all([answers, sq1, sq2]);
+    }).then(queries => {
+      let answers = queries[0];
+      let departure_station_id = queries[1][0].id;
+      let arrival_station_id = queries[2][0].id;
+      let departure_date = moment(colors.strip(answers.departure_date) + ' ' + answers.hour, 'dddd, MMMM D H[h]').format();
+      let passenger_ids = answers.passenger_ids;
+
+      return trainline.searchTrips(departure_station_id, arrival_station_id, passenger_ids, departure_date);
+    }).then(trips => {
+      // console.log(trips);
     });
   }
 }
