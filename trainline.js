@@ -128,6 +128,7 @@ trainline.searchStation = function(query) {
  * @return array({})
  */
 trainline.searchTrips = function(departure_station_id, arrival_station_id, passenger_ids, departure_date) {
+  let flexibility = 'nonflexi';
   let body = {
     search: {
       arrival_station_id: arrival_station_id,
@@ -137,7 +138,56 @@ trainline.searchTrips = function(departure_station_id, arrival_station_id, passe
       systems: ["sncf", "db", "busbud", "idtgv", "ouigo", "trenitalia", "ntv", "hkx", "renfe", "benerail", "ocebo", "timetable"]
     }
   };
-  return apiRequest('search', 'POST', body);
+  return apiRequest('search', 'POST', body).then(result => {
+    let stations = arrToObj(result.stations);
+    let passengers = arrToObj(result.passengers);
+    let folders = arrToObj(result.folders);
+    let segments = arrToObj(result.segments);
+
+    let trips = {};
+    let atrips = [];
+    result.trips.forEach(trip => {
+      // To keep it simple, we only keep the trips with the flixibility `flexibility`
+      let folder = folders[trip.folder_id];
+      if (folder.flexibility != flexibility) {
+        return;
+      }
+
+      let t = trips[trip.digest];
+      if (!t) {
+        t = {
+          departure_station: stations[trip.departure_station_id].name,
+          arrival_station: stations[trip.arrival_station_id].name,
+          departure_date: trip.departure_date,
+          arrival_date: trip.arrival_date,
+          segments: [],
+          travel_classes: {}
+        };
+
+        trip.segment_ids.forEach(segment => {
+          let s = segments[segment];
+          t.segments.push({
+            departure_station: stations[s.departure_station_id].name,
+            arrival_station: stations[s.arrival_station_id].name,
+            departure_date: s.departure_date,
+            arrival_date: s.arrival_date,
+            train_name: s.train_name
+          });
+        });
+
+        trips[trip.digest] = t;
+        atrips.push(t);
+      }
+
+      t.travel_classes[folder.travel_class] = {
+        cents: trip.cents,
+        currency: trip.currency,
+        trip_id: trip.id
+      };
+    });
+
+    return atrips;
+  });
 };
 
 module.exports = trainline;
