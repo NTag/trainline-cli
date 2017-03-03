@@ -170,6 +170,30 @@ function main() {
 }
 
 /**
+ * Adapt a list of trips from a search
+ * for an easy display. Compute the list of stops from the list of segments.
+ * @param trips array({})
+ * @return array({})
+ */
+function humanifyTrips(trips) {
+  trips.forEach(trip => {
+    trip.stops = [];
+    for (let i = 1; i < trip.segments.length; i++) {
+      let segment = trip.segments[i];
+      let psegment = trip.segments[i-1];
+      let stop = {
+        station: segment.departure_station,
+        train_name: segment.train_name,
+        duration: (moment(segment.departure_date) - moment(psegment.arrival_date))
+      };
+      trip.stops.push(stop);
+    }
+  });
+
+  return trips;
+};
+
+/**
  * Return the next `limit` days, to a human format
  * @param limit number The number of days to return
  * @return array(string)
