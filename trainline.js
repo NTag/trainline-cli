@@ -110,4 +110,13 @@ trainline.basket = function() {
   return tripsWithBookingStatus('booked');
 };
 
+/**
+ * Search for a station
+ * @param query string The query
+ * @return Promise([{id, name}])
+ */
+trainline.searchStation = function(query) {
+  return apiRequest('stations?context=search&q=' + encodeURI(query)).then(o => o.stations);
+};
+
 module.exports = trainline;
