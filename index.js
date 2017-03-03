@@ -124,11 +124,17 @@ function main() {
         type: 'autocomplete',
         name: 'departure_date',
         suggestOnly: false,
-        message: 'When:',
+        message: 'Departure date:',
         source: (answers, input) => {
           return Promise.resolve(fuzzy.filter(input || '', dates).map(e => { return e.string }));
         },
         pageSize: 5
+      },
+      {
+        type: 'list',
+        name: 'hour',
+        message: 'Time:',
+        choices: ['14h', '16h', '18h', '20h', '22h', '6h', '8h', '10h', '12h']
       },
       {
         type: 'checkbox',
@@ -137,13 +143,16 @@ function main() {
         choices: uinfos.passengers.map(passenger => {
           return {
             checked: passenger.is_selected,
-            name: passenger.first_name + ' ' + passenger.last_name
+            name: passenger.first_name + ' ' + passenger.last_name,
+            value: passenger.id
           }
         }).sort((a, b) => {
           return a.checked;
         })
       }
     ]).then(answers => {
+      // We need to find the ids of the selected stations
+      // We need to format the date
       console.log(JSON.stringify(answers, null, 2));
     });
   }
