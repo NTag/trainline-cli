@@ -164,7 +164,38 @@ function main() {
 
       return trainline.searchTrips(departure_station_id, arrival_station_id, passenger_ids, departure_date);
     }).then(trips => {
-      // console.log(trips);
+      trips = humanifyTrips(trips);
+      let choices = [];
+      trips.forEach(trip => {
+        let table = new Table({ chars: { 'top': '' , 'top-mid': '' , 'top-left': '' , 'top-right': ''
+         , 'bottom': '' , 'bottom-mid': '' , 'bottom-left': '' , 'bottom-right': ''
+         , 'left': '' , 'left-mid': '' , 'mid': '' , 'mid-mid': ''
+         , 'right': '' , 'right-mid': '' , 'middle': ' ' },
+  style: { 'padding-left': 0, 'padding-right': 0 }, colWidths: [20, 100] });
+        let duration = formatDuration(moment(trip.arrival_date) - moment(trip.departure_date));
+        let departure_time = moment(trip.departure_date).format('HH:mm');
+        let arrival_time = moment(trip.arrival_date).format('HH:mm');
+        let price = trip.travel_classes.economy.cents/100 + ' / ' + trip.travel_classes.first.cents/100 + ' ' + trip.travel_classes.first.currency;
+        table.push([duration, departure_time + '  ' + trip.departure_station]);
+        trip.stops.forEach(stop => {
+          table.push(['  ', '      ' + formatDuration(stop.duration) + '  ' + stop.station]);
+        });
+        table.push(['  ' + price, '  ' + arrival_time + '  ' + trip.arrival_station]);
+
+        choices.push(table.toString() + '\n  ──────────────');
+      });
+
+      return inquirer.prompt([
+        {
+          type: 'list',
+          name: 'trips',
+          message: 'Available trips:',
+          choices: choices,
+          pageSize: 20
+        }
+      ]);
+    }).then(answers => {
+      console.log(answers);
     });
   }
 }
@@ -192,6 +223,31 @@ function humanifyTrips(trips) {
 
   return trips;
 };
+
+/**
+ * Format for a human the duration in seconds
+ * @param duration number The duration in ms
+ * @return string
+ */
+function formatDuration(duration) {
+  function fillz(n) {
+    if (n < 10) {
+      return '0' + n;
+    }
+    return n;
+  }
+  duration = duration/1000;
+  let o = '';
+  if ((duration % 3600) != 0) {
+    o = Math.ceil((duration%3600)/60);
+  }
+  if (duration >= 3600) {
+    o = Math.floor(duration/3600) + 'h' + fillz(o);
+  } else {
+    o += ' min';
+  }
+  return o;
+}
 
 /**
  * Return the next `limit` days, to a human format
