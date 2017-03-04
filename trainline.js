@@ -184,11 +184,29 @@ trainline.searchTrips = function(departure_station_id, arrival_station_id, passe
       t.travel_classes[folder.travel_class] = {
         cents: trip.cents,
         currency: trip.currency,
-        trip_id: trip.id
+        tobook: {
+          search_id: result.search.id,
+          folder_id: folder.id
+        }
       };
     });
 
     return atrips;
+  });
+};
+
+/**
+ * Book a trip to the basket
+ * @param {search_id} string ID of the search
+ * @param {folder_id} string ID of the folder
+ * @return Promise
+ */
+trainline.bookTrip = function(search_id, folder_id) {
+  return apiRequest('book', 'POST', {
+    book: {
+      search_id: search_id,
+      outward_folder_id: folder_id
+    }
   });
 };
 

@@ -215,25 +215,27 @@ function main() {
         return inquirer.prompt([
           {
             type: 'list',
-            name: 'trip_id',
+            name: 'tobook',
             message: 'Travel class:',
             choices: [
               {
                 name: 'Economy: ' + travel_classes.economy.cents/100 + ' ' + travel_classes.economy.currency,
-                value: travel_classes.economy.trip_id
+                value: travel_classes.economy.tobook
               },
               {
                 name: 'First: ' + travel_classes.first.cents/100 + ' ' + travel_classes.first.currency,
-                value: travel_classes.first.trip_id
+                value: travel_classes.first.tobook
               }
             ]
           }
         ])
       } else {
-        return Promise.resolve({trip_id: travel_classes[Object.keys(travel_classes)[0]].trip_id});
+        return Promise.resolve({tobook: travel_classes[Object.keys(travel_classes)[0]].tobook});
       }
     }).then(trip => {
-      console.log(trip);
+      return trainline.bookTrip(trip.tobook.search_id, trip.tobook.folder_id);
+    }).then(result => {
+      console.log(colors.yellow('Your trip has been added to your basket!'));
     });
   }
 }
