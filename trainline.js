@@ -124,10 +124,11 @@ trainline.searchStation = function(query) {
  * @param {departure_station_id} string The id of the departure station
  * @param {arrival_station_id} string The id of the arrival station
  * @param {passenger_ids} array The ids of the passengers
+ * @param {card_ids} array The ids of the cards
  * @param {departure_date} string The departure date
  * @return array({})
  */
-trainline.searchTrips = function(departure_station_id, arrival_station_id, passenger_ids, departure_date) {
+trainline.searchTrips = function(departure_station_id, arrival_station_id, passenger_ids, card_ids, departure_date) {
   let flexibility = 'nonflexi';
   let body = {
     search: {
@@ -135,6 +136,7 @@ trainline.searchTrips = function(departure_station_id, arrival_station_id, passe
       departure_date: departure_date,
       departure_station_id: departure_station_id,
       passenger_ids: passenger_ids,
+      card_ids: card_ids,
       systems: ["sncf", "db", "busbud", "idtgv", "ouigo", "trenitalia", "ntv", "hkx", "renfe", "benerail", "ocebo", "timetable"]
     }
   };

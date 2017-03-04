@@ -138,13 +138,16 @@ function main() {
       },
       {
         type: 'checkbox',
-        name: 'passenger_ids',
+        name: 'passengers',
         message: 'Passengers:',
         choices: uinfos.passengers.map(passenger => {
           return {
             checked: passenger.is_selected,
             name: passenger.first_name + ' ' + passenger.last_name,
-            value: passenger.id
+            value: {
+              id: passenger.id,
+              card_ids: passenger.card_ids
+            }
           }
         }).sort((a, b) => {
           return a.checked;
@@ -160,9 +163,11 @@ function main() {
       let departure_station_id = queries[1][0].id;
       let arrival_station_id = queries[2][0].id;
       let departure_date = moment(colors.strip(answers.departure_date) + ' ' + answers.hour, 'dddd, MMMM D H[h]').format();
-      let passenger_ids = answers.passenger_ids;
+      let passengers = answers.passengers;
+      let passenger_ids = passengers.map(p => { return p.id });
+      let card_ids = passengers.reduce((acc, p) => { return acc.concat(p.card_ids) }, []);
 
-      return trainline.searchTrips(departure_station_id, arrival_station_id, passenger_ids, departure_date);
+      return trainline.searchTrips(departure_station_id, arrival_station_id, passenger_ids, card_ids, departure_date);
     }).then(trips => {
       trips = humanifyTrips(trips);
       let choices = [];
