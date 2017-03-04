@@ -236,7 +236,7 @@ function main() {
 /**
  * Adapt a list of trips from a search
  * for an easy display. Compute the list of stops from the list of segments.
- * @param trips array({})
+ * @param {trips} array({})
  * @return array({})
  */
 function humanifyTrips(trips) {
@@ -259,7 +259,7 @@ function humanifyTrips(trips) {
 
 /**
  * Format for a human the duration in seconds
- * @param duration number The duration in ms
+ * @param {duration} number The duration in ms
  * @return string
  */
 function formatDuration(duration) {
@@ -284,7 +284,7 @@ function formatDuration(duration) {
 
 /**
  * Return the next `limit` days, to a human format
- * @param limit number The number of days to return
+ * @param {limit} number The number of days to return
  * @return array(string)
  */
 function getNextDays(limit) {
@@ -307,8 +307,8 @@ function getNextDays(limit) {
 /**
  * Search for a station
  * If no query, return the most popular stations of the user
- * @param answers The previous answers
- * @param input string The query
+ * @param {answers} array The previous answers
+ * @param {input} string The query
  * @return Promise([string])
  */
 function searchStation(answers, input) {
@@ -324,7 +324,7 @@ function searchStation(answers, input) {
 
 /**
  * Create a table for display from an array of trips
- * @param trips array List of trips
+ * @param {trips} array List of trips
  * @return string The table to display
  */
 function tripsToTable(trips) {

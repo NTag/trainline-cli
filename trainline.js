@@ -7,9 +7,9 @@ let trainline = {
 
 /**
  * Perform a request to the API
- * @param url string The URL of the resource
- * @param method string 'GET' or 'POST'
- * @param object The potential JSON body
+ * @param {url} string The URL of the resource
+ * @param {method} string 'GET' or 'POST'
+ * @param {body} object The potential JSON body
  * @return Promise()
  */
 function apiRequest(url, method, body) {
@@ -30,7 +30,7 @@ function apiRequest(url, method, body) {
 /**
  * Convert and array containing objects with an `id` field
  * to an object where the keys are the ids
- * @param arr Array
+ * @param {arr} Array
  * @return object
  */
 function arrToObj(arr) {
@@ -66,7 +66,7 @@ function getPnrs() {
 
 /**
  * Return the booked or emitted trips
- * @param status string 'booked' or 'emitted'
+ * @param {status} string 'booked' or 'emitted'
  * @return Promise([{arrival_date, departure_date, arrival_station, departure_station, cents}])
  */
 function tripsWithBookingStatus(status) {
@@ -81,8 +81,8 @@ function tripsWithBookingStatus(status) {
 
 /**
  * Try to connect the user with email and password
- * @param email string
- * @param password string
+ * @param {email} string
+ * @param {password} string
  * @return Promise(infos)
  */
 trainline.connexion = function (email, password) {
@@ -112,7 +112,7 @@ trainline.basket = function() {
 
 /**
  * Search for a station
- * @param query string The query
+ * @param {query} string The query
  * @return Promise([{id, name}])
  */
 trainline.searchStation = function(query) {
@@ -121,10 +121,10 @@ trainline.searchStation = function(query) {
 
 /**
  * Search for trips
- * @param departure_station_id string The id of the departure station
- * @param arrival_station_id string The id of the arrival station
- * @param passenger_ids array(string) The ids of the passengers
- * @param departure_date string The departure date
+ * @param {departure_station_id} string The id of the departure station
+ * @param {arrival_station_id} string The id of the arrival station
+ * @param {passenger_ids} array The ids of the passengers
+ * @param {departure_date} string The departure date
  * @return array({})
  */
 trainline.searchTrips = function(departure_station_id, arrival_station_id, passenger_ids, departure_date) {
