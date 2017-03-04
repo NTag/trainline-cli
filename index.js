@@ -166,6 +166,7 @@ function main() {
     }).then(trips => {
       trips = humanifyTrips(trips);
       let choices = [];
+      choices.push(new inquirer.Separator());
       trips.forEach(trip => {
         let table = new Table({ chars: { 'top': '' , 'top-mid': '' , 'top-left': '' , 'top-right': ''
          , 'bottom': '' , 'bottom-mid': '' , 'bottom-left': '' , 'bottom-right': ''
@@ -182,7 +183,8 @@ function main() {
         });
         table.push(['  ' + price, '  ' + arrival_time + '  ' + trip.arrival_station]);
 
-        choices.push(table.toString() + '\n  ──────────────');
+        choices.push(table.toString());
+        choices.push(new inquirer.Separator());
       });
 
       return inquirer.prompt([
