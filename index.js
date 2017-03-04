@@ -176,14 +176,22 @@ function main() {
         let duration = formatDuration(moment(trip.arrival_date) - moment(trip.departure_date));
         let departure_time = moment(trip.departure_date).format('HH:mm');
         let arrival_time = moment(trip.arrival_date).format('HH:mm');
-        let price = trip.travel_classes.economy.cents/100 + ' / ' + trip.travel_classes.first.cents/100 + ' ' + trip.travel_classes.first.currency;
+        let price = trip.travel_classes.economy.cents/100;
+        if (trip.travel_classes.first) {
+          price += ' / ' + trip.travel_classes.first.cents/100;
+        }
+        price += ' ' + trip.travel_classes.economy.currency;
         table.push([duration, departure_time + '  ' + trip.departure_station]);
         trip.stops.forEach(stop => {
           table.push(['  ', '      ' + formatDuration(stop.duration) + '  ' + stop.station]);
         });
         table.push(['  ' + price, '  ' + arrival_time + '  ' + trip.arrival_station]);
 
-        choices.push(table.toString());
+        choices.push({
+          name: table.toString(),
+          value: trip.travel_classes,
+          short: trip.departure_station + ' ' + departure_time + ' > ' + arrival_time + ' ' + trip.arrival_station
+        });
         choices.push(new inquirer.Separator());
       });
 
