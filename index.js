@@ -150,7 +150,7 @@ function main() {
           }
           selectNextPnr();
         });
-        return Promise.all([trainline.payment_cards(), pnrsq]);
+        return Promise.all([trainline.paymentCards(), pnrsq]);
       }).then(qs => {
         let payment_cards = qs[0].payment_cards.map(c => {
           return {
@@ -178,7 +178,17 @@ function main() {
           }
         ]);
       }).then(answers => {
-        console.log(answers);
+        if (!answers.confirm) {
+          console.log('Abort');
+          return;
+        }
+        return trainline.payForPnrs(answers.card, answers.cvv, finalPnrs);
+      }).then(payment => {
+        if (payment.payment.status != 'success') {
+          console.log(colors.red('An error occured. Please check your card and CVV.'));
+          return;
+        }
+        console.log(colors.yellow('The payment succeed, your trips have been booked! You should receive an email in a minute.'))
       });
     });
   }

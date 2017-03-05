@@ -233,8 +233,43 @@ trainline.selectPnr = function(pnr_id, is_selected) {
  * Return the payment cards registered
  * @return Promise
  */
-trainline.payment_cards = function() {
+trainline.paymentCards = function() {
   return apiRequest('payment_cards');
+};
+
+/**
+ * Pay for pnrs. This method computes the total price to pay, creates and
+ * confirm the payment.
+ * @param {payment_card_id} string ID of the credit card
+ * @param {cvv} string The security code of the credit card
+ * @param {pnrs} array({}) Pnrs to buy
+ * @return Promise
+ */
+trainline.payForPnrs = function(payment_card_id, cvv, pnrs) {
+  if (pnrs.length == 0) {
+    return Promise.resolve();
+  }
+
+  let totalPrice = pnrs.reduce((acc, pnr) => { return acc + pnr.cents }, 0);
+  let currency = pnrs[0].currency;
+  let pnr_ids = pnrs.map(pnr => { return pnr.pnr_id });
+
+  let body = {
+    payment: {
+      cents: totalPrice,
+      currency: currency,
+      mean: "payment_card",
+      payment_card_id: payment_card_id,
+      cvv_code: cvv,
+      pnr_ids: pnr_ids
+    }
+  };
+
+  return apiRequest('payments', 'POST', body).then(payment => {
+    let paymentId = payment.payment.id;
+
+    return apiRequest('payments/' + paymentId + '/confirm', 'POST', body);
+  });
 };
 
 module.exports = trainline;
