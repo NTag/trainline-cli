@@ -20,4 +20,4 @@ npm install
 ```
 
 Connection through Facebook, Google, or anonymous search are not supported yet.
-Your password is not stored, but your connection token is, in `.node-persist`.
+Your password is not stored, but your connection token is, in `.node-persist/`.

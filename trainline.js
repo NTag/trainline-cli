@@ -58,6 +58,8 @@ function getPnrs() {
       trip.passenger = passengers[trip.passenger_id];
       trip.reference = pnrs[folders[trip.folder_id].pnr_id].code;
       trip.booking_status = pnrs[folders[trip.folder_id].pnr_id].booking_status;
+      trip.pnr_id = folders[trip.folder_id].pnr_id;
+      trip.is_selected = pnrs[folders[trip.folder_id].pnr_id].is_selected;
     });
 
     return infos;

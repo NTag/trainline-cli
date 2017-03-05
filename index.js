@@ -42,6 +42,7 @@ program
   .option('-L, --logout', 'Logout of your Trainline account')
   .option('-s, --search', 'Search for a trip')
   .option('-t, --trips', 'List of your trips')
+  .option('-a, --buy', 'Buy trips in your basket')
   .option('-b, --basket', 'List of your options')
   .parse(process.argv);
 
@@ -97,6 +98,28 @@ function main() {
     console.log('Content of your basket');
     trainline.basket().then(trips => {
       console.log(tripsToTable(trips));
+    });
+  }
+
+  if (program.buy) {
+    trainline.basket().then(trips => {
+      let choices = tripsToArrayOfTables(trips, true, '   ').map(trip => {
+        return {
+          name: trip.forDisplay,
+          checked: trip.is_selected,
+          value: trip.pnr_id,
+          short: trip.short
+        }
+      });
+      inquirer.prompt([
+        {
+          type: 'checkbox',
+          name: 'pnrs',
+          message: 'Select your trips:',
+          choices: choices,
+          pageSize: 20
+        }
+      ]);
     });
   }
 
@@ -330,33 +353,75 @@ function searchStation(answers, input) {
 }
 
 /**
- * Create a table for display from an array of trips
+ * Create an array ready to be displayed from the trips
  * @param {trips} array List of trips
- * @return string The table to display
+ * @param {hideRef} boolean Hide the reference of the trip (useful for basket, where trips don't have references yet)
+ * @param {offset} string String which will be added at the beginning of new lines (useful for Inquirer)
+ * @return array({pnr_id, is_selected, forDisplay})
  */
-function tripsToTable(trips) {
+function tripsToArrayOfTables(trips, hideRef, offset) {
+  offset = offset || '';
+  let nl = '\n' + offset;
+
+  let o = [];
+
+  // We will create a complete table with cli-table2
+  // so everything will be correctly aligned
+  // And then we will split it
   let table = new Table({
-    style: { 'padding-left': 0 }
+    chars: { 'top': '' , 'top-mid': '' , 'top-left': '' , 'top-right': ''
+     , 'bottom': '' , 'bottom-mid': '' , 'bottom-left': '' , 'bottom-right': ''
+     , 'left': '' , 'left-mid': '' , 'mid': '' , 'mid-mid': ''
+     , 'right': '' , 'right-mid': ' ' , 'middle': '  ' },
+     style: { 'padding-left': 0, 'padding-right': 0 }
   });
 
   trips.forEach(trip => {
-    let reference = trip.reference;
+    let t = [];
 
+    if (!hideRef) {
+      let reference = trip.reference;
+      t.push(reference);
+    }
+
+    // [TODO] Add hour?
     let departure_date = moment(trip.departure_date).calendar();
     let arrival_date = moment(trip.arrival_date).calendar();
     let date = departure_date;
     if (departure_date != arrival_date) {
-      date += '\n' + arrival_date;
+      date += nl + arrival_date;
     }
 
-    let stations = trip.departure_station.name + '\n' + trip.arrival_station.name;
+    let stations = trip.departure_station.name + nl + trip.arrival_station.name;
 
     let passenger = trip.passenger.first_name;
 
     let price = {hAlign: 'right', content: trip.cents/100 + ' ' + trip.currency};
 
-    table.push([reference, date, stations, passenger, price]);
+    t = t.concat([date, stations, passenger, price]);
+
+    o.push({
+      pnr_id: trip.pnr_id,
+      is_selected: trip.is_selected,
+      short: trip.departure_station.name + ' > ' + trip.arrival_station.name + ' (' + passenger + ' - ' + price.content + ')'
+    });
+    table.push(t);
   });
 
-  return table.toString();
+  let stringTrips = table.toString().split(/\n\u001b\[90m \u001b\[39m\n/g);
+
+  stringTrips.forEach((s, i) => {
+    o[i].forDisplay = s;
+  });
+
+  return o;
+}
+
+/**
+ * Create a table for display from an array of trips
+ * @param {trips} array List of trips
+ * @return string The table to display
+ */
+function tripsToTable(trips) {
+  return tripsToArrayOfTables(trips).map(trip => { return trip.forDisplay }).join('\n');
 }
