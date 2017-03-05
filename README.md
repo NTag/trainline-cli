@@ -11,12 +11,7 @@ npm install
 
 ## Usage
 ```
-./index.js --login email@dress.com
-./index.js --search
-./index.js --basket
-./index.js --trips
-./index.js --logout
-./index.js --help
+./index.js
 ```
 
 Connection through Facebook, Google, or anonymous search are not supported yet.

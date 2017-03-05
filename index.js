@@ -70,7 +70,7 @@ function main() {
 
   // The following actions need a user to be connected
   if (!uinfos) {
-    console.log('First you need to login to your Trainline account');
+    displayInfo('First you need to login to your Trainline account');
     return login().then(main);
   }
 
@@ -106,8 +106,7 @@ function loadUserInfos() {
     trainline.TOKEN = uinfos.meta.token;
     trainline.USER_ID = uinfos.user.id;
 
-    // console.log(uinfos.user);
-    console.log(colors.yellow('Welcome ' + uinfos.user.first_name + ' ' + uinfos.user.last_name + '!'));
+    displayInfo('Welcome ' + uinfos.user.first_name + ' ' + uinfos.user.last_name + '!');
   }
 }
 
@@ -127,7 +126,7 @@ function login(email) {
   });
   return inquirer.prompt(questions).then(answers => {
     if (!answers.password) {
-      console.log('Please enter your password');
+      displayError('Please enter your password');
       return;
     }
     let login = email || answers.email;
@@ -138,14 +137,14 @@ function login(email) {
   }).then(() => {
     loadUserInfos();
   }).catch(err => {
-    console.log(colors.red('Wrong password or wrong email address'));
+    displayError('Wrong password or wrong email address');
   });
 }
 
 function logout() {
   return storage.removeItem('uinfos').then(() => {
     uinfos = null;
-    console.log('You are now disconnected');
+    displayInfo('You are now disconnected');
   });
 }
 
@@ -296,7 +295,7 @@ style: { 'padding-left': 0, 'padding-right': 0 }, colWidths: [20, 100] });
   }).then(trip => {
     return trainline.bookTrip(trip.tobook.search_id, trip.tobook.folder_id);
   }).then(result => {
-    console.log(colors.yellow('Your trip has been added to your basket!'));
+    displaySuccess('Your trip has been added to your basket!');
   });
 }
 
@@ -383,16 +382,16 @@ function buyFromBasket() {
     ]);
   }).then(answers => {
     if (!answers.confirm) {
-      console.log('Abort');
+      displayError('Aborting');
       return;
     }
     return trainline.payForPnrs(answers.card, answers.cvv, finalPnrs);
   }).then(payment => {
     if (payment.payment.status != 'success') {
-      console.log(colors.red('An error occured. Please check your card and CVV.'));
+      displayError('An error occured. Please check your card and CVV.');
       return;
     }
-    console.log(colors.yellow('The payment succeed, your trips have been booked! You should receive an email in a minute.'))
+    displaySuccess('The payment succeed, your trips have been booked! You should receive an email in a minute.');
   });
 }
 
@@ -556,4 +555,17 @@ function tripsToArrayOfTables(trips, hideRef, offset) {
  */
 function tripsToTable(trips) {
   return tripsToArrayOfTables(trips).map(trip => { return trip.forDisplay }).join('\n');
+}
+
+/**
+ * Helpers to display messages
+ */
+function displayInfo(message) {
+  console.log(colors.blue(colors.bold('i ') + message));
+}
+function displaySuccess(message) {
+  console.log(colors.yellow(colors.bold('✓ ') + message));
+}
+function displayError(message) {
+  console.log(colors.red(colors.bold('x ') + message));
 }
