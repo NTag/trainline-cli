@@ -29,6 +29,7 @@ storage.init({
   storage.getItem('uinfos').then(function(infos) {
     if (infos && infos.meta && infos.meta.token) {
       trainline.TOKEN = infos.meta.token;
+      trainline.USER_ID = infos.user.id;
       uinfos = infos;
       console.log(colors.yellow('Welcome ' + uinfos.user.first_name + ' ' + uinfos.user.last_name + '!'));
     }
@@ -103,11 +104,12 @@ function main() {
 
   if (program.buy) {
     trainline.basket().then(trips => {
+      let finalPnrs;
       let choices = tripsToArrayOfTables(trips, true, '   ').map(trip => {
         return {
           name: trip.forDisplay,
-          checked: trip.is_selected,
-          value: trip.pnr_id,
+          checked: trip.details.is_selected,
+          value: trip.details,
           short: trip.short
         }
       });
@@ -119,7 +121,38 @@ function main() {
           choices: choices,
           pageSize: 20
         }
-      ]);
+      ]).then(answers => {
+        finalPnrs = answers;
+        // Now we will select the right pnrs and unselect the other
+        let pnrsToChange = [];
+        let selectedPnrs = answers.pnrs.map(pnr => { return pnr.pnr_id });
+        trips.forEach(trip => {
+          let isSelected = (selectedPnrs.indexOf(trip.pnr_id) > -1);
+          if ((trip.is_selected && !isSelected) || (!trip.is_selected && isSelected)) {
+            pnrsToChange.push({
+              pnr_id: trip.pnr_id,
+              is_selected: isSelected
+            });
+          }
+        });
+
+        return new Promise((resolve, reject) => {
+          let i = 0;
+          // Trainline seems not to accept changing too fast multiple pnrs
+          // So I do it sequentially
+          function selectNextPnr() {
+            if (i >= pnrsToChange.length) {
+              return resolve();
+            }
+            let pnr = pnrsToChange[i];
+            i++;
+            trainline.selectPnr(pnr.pnr_id, pnr.is_selected).then(selectNextPnr);
+          }
+          selectNextPnr();
+        });
+      }).then(() => {
+
+      });
     });
   }
 
@@ -357,7 +390,7 @@ function searchStation(answers, input) {
  * @param {trips} array List of trips
  * @param {hideRef} boolean Hide the reference of the trip (useful for basket, where trips don't have references yet)
  * @param {offset} string String which will be added at the beginning of new lines (useful for Inquirer)
- * @return array({pnr_id, is_selected, forDisplay})
+ * @return array({details, short, forDisplay})
  */
 function tripsToArrayOfTables(trips, hideRef, offset) {
   offset = offset || '';
@@ -401,8 +434,7 @@ function tripsToArrayOfTables(trips, hideRef, offset) {
     t = t.concat([date, stations, passenger, price]);
 
     o.push({
-      pnr_id: trip.pnr_id,
-      is_selected: trip.is_selected,
+      details: trip,
       short: trip.departure_station.name + ' > ' + trip.arrival_station.name + ' (' + passenger + ' - ' + price.content + ')'
     });
     table.push(t);

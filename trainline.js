@@ -2,13 +2,14 @@ const request = require('request-promise');
 const API = 'https://www.trainline.eu/api/v5/';
 
 let trainline = {
-  TOKEN: null
+  TOKEN: null,
+  USER_ID: null
 };
 
 /**
  * Perform a request to the API
  * @param {url} string The URL of the resource
- * @param {method} string 'GET' or 'POST'
+ * @param {method} string 'GET', 'POST' or 'PUT'
  * @param {body} object The potential JSON body
  * @return Promise()
  */
@@ -208,6 +209,22 @@ trainline.bookTrip = function(search_id, folder_id) {
     book: {
       search_id: search_id,
       outward_folder_id: folder_id
+    }
+  });
+};
+
+/**
+ * (Un)Select a pnr in the basket
+ * @param {pnr_id} string ID of the pnr
+ * @param {is_selected} boolean New status of the pnr
+ * @return Promise
+ */
+trainline.selectPnr = function(pnr_id, is_selected) {
+  return apiRequest('pnrs/' + pnr_id, 'PUT', {
+    pnr: {
+      is_selected: is_selected,
+      booker_id: trainline.USER_ID,
+      inquiry_id: null
     }
   });
 };
