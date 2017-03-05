@@ -7,6 +7,7 @@ const colors = require('colors');
 const moment = require('moment');
 const Table = require('cli-table2');
 const fuzzy = require('fuzzy');
+const Spinner = require('cli-spinner').Spinner;
 const inquirer = require('inquirer');
 inquirer.registerPrompt('autocomplete', require('inquirer-autocomplete-prompt'));
 
@@ -250,7 +251,7 @@ function searchForTrips() {
        , 'bottom': '' , 'bottom-mid': '' , 'bottom-left': '' , 'bottom-right': ''
        , 'left': '' , 'left-mid': '' , 'mid': '' , 'mid-mid': ''
        , 'right': '' , 'right-mid': '' , 'middle': ' ' },
-style: { 'padding-left': 0, 'padding-right': 0 }, colWidths: [20, 100] });
+style: { 'padding-left': 0, 'padding-right': 0 }, colWidths: [20, 60] });
       let duration = colors.white(formatDuration(moment(trip.arrival_date) - moment(trip.departure_date)));
       let departure_time = colors.green(moment(trip.departure_date).format('HH:mm'));
       let arrival_time = colors.green(moment(trip.arrival_date).format('HH:mm'));
@@ -560,7 +561,6 @@ function tripsToArrayOfTables(trips, hideRef, offset) {
       t.push(reference);
     }
 
-    // [TODO] Add hour?
     let departure_date = colors.green(moment(trip.departure_date).format('ddd, MMM D HH:mm'));
     let arrival_date = colors.green(moment(trip.arrival_date).format('ddd, MMM D HH:mm'));
     let date = departure_date;
