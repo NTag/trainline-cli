@@ -247,11 +247,7 @@ function searchForTrips() {
     let choices = [];
     choices.push(new inquirer.Separator());
     trips.forEach(trip => {
-      let table = new Table({ chars: { 'top': '' , 'top-mid': '' , 'top-left': '' , 'top-right': ''
-       , 'bottom': '' , 'bottom-mid': '' , 'bottom-left': '' , 'bottom-right': ''
-       , 'left': '' , 'left-mid': '' , 'mid': '' , 'mid-mid': ''
-       , 'right': '' , 'right-mid': '' , 'middle': ' ' },
-style: { 'padding-left': 0, 'padding-right': 0 }, colWidths: [20, 60] });
+      let table = compactTable({ colWidths: [20, 60] });
       let duration = colors.white(formatDuration(moment(trip.arrival_date) - moment(trip.departure_date)));
       let departure_time = colors.green(moment(trip.departure_date).format('HH:mm'));
       let arrival_time = colors.green(moment(trip.arrival_date).format('HH:mm'));
@@ -543,13 +539,7 @@ function tripsToArrayOfTables(trips, hideRef, offset) {
   // We will create a complete table with cli-table2
   // so everything will be correctly aligned
   // And then we will split it
-  let table = new Table({
-    chars: { 'top': '' , 'top-mid': '' , 'top-left': '' , 'top-right': ''
-     , 'bottom': '' , 'bottom-mid': '' , 'bottom-left': '' , 'bottom-right': ''
-     , 'left': '' , 'left-mid': '' , 'mid': '' , 'mid-mid': ''
-     , 'right': '' , 'right-mid': ' ' , 'middle': '  ' },
-     style: { 'padding-left': 0, 'padding-right': 0 }
-  });
+  let table = compactTable({ chars: {'right-mid': ' '}});
 
   trips.reverse();
 
@@ -599,6 +589,29 @@ function tripsToArrayOfTables(trips, hideRef, offset) {
  */
 function tripsToTable(trips) {
   return tripsToArrayOfTables(trips).map(trip => { return trip.forDisplay }).join('\n');
+}
+
+/**
+ * Return a new Table object with custom chars, so it is more compact than default
+ * @param {params} objet The other parameters to consider
+ * @return Table
+ */
+function compactTable(params) {
+  params = params || {};
+  params.chars = params.chars || {};
+  let config = {
+    chars: {
+      'top': '', 'top-mid': '', 'top-left': '', 'top-right': '',
+      'bottom': '' , 'bottom-mid': '' , 'bottom-left': '' , 'bottom-right': '',
+      'left': '', 'left-mid': '', 'mid': '', 'mid-mid': '',
+      'right': '' , 'right-mid': '' , 'middle': '  '
+    },
+    style: { 'padding-left': 0, 'padding-right': 0 }
+  };
+  Object.assign(config.chars, params.chars);
+  delete params.chars;
+  Object.assign(config, params);
+  return new Table(config);
 }
 
 /**
