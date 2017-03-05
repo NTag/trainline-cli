@@ -44,10 +44,10 @@ function menu() {
       name: 'menu',
       message: 'What do you want to do:',
       choices: [
-        { name: "Search for a trip", value: searchForTrips },
-        { name: "Pay for a trip in my basket", value: buyFromBasket },
-        { name: "Consult my booked trips", value: consultBookedTrips },
-        { name: "Logout", value: logout },
+        { name: 'Search for a trip', value: searchForTrips },
+        { name: 'Pay for a trip in my basket', value: buyFromBasket },
+        { name: 'Consult my booked trips', value: consultBookedTrips },
+        { name: 'Logout', value: logout },
       ],
       pageSize: 20
     }
@@ -377,7 +377,7 @@ function buyFromBasket() {
       {
         type: 'confirm',
         name: 'confirm',
-        message: "Do you confirm the payment of " + finalPnrs.length + " tickets for " + finalPnrs.reduce((acc, pnr) => { return acc + pnr.cents }, 0)/100 + ' EUR?'
+        message: 'Do you confirm the payment of ' + finalPnrs.length + ' ticket' + s(finalPnrs.length) + ' for ' + finalPnrs.reduce((acc, pnr) => { return acc + pnr.cents }, 0)/100 + ' EUR?'
       }
     ]);
   }).then(answers => {
@@ -391,7 +391,14 @@ function buyFromBasket() {
       displayError('An error occured. Please check your card and CVV.');
       return;
     }
-    displaySuccess('The payment succeed, your trips have been booked! You should receive an email in a minute.');
+    let m = 'The payment was successful, your ';
+    if (finalPnrs.length > 1) {
+      m += 'trips have';
+    } else {
+      m += 'trip has';
+    }
+    m += 'been booked! You should receive an email in a minute.';
+    displaySuccess(m);
   });
 }
 
@@ -568,4 +575,11 @@ function displaySuccess(message) {
 }
 function displayError(message) {
   console.log(colors.red(colors.bold('x ') + message));
+}
+
+function s(n) {
+  if (n >= 2) {
+    return 's';
+  }
+  return '';
 }
