@@ -15,7 +15,6 @@
     "inquirer-autocomplete-prompt": "^0.8.0",
     "moment": "^2.17.1",
     "node-persist": "^2.0.8",
-    "prompt": "^1.0.0",
     "request": "^2.79.0",
     "request-promise": "^4.1.1"
   }

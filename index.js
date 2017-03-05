@@ -2,7 +2,6 @@
 
 const trainline = require('./trainline.js');
 const program = require('commander');
-const prompt = require('prompt');
 const storage = require('node-persist');
 const colors = require('colors');
 const moment = require('moment');
@@ -14,11 +13,6 @@ inquirer.registerPrompt('autocomplete', require('inquirer-autocomplete-prompt'))
 // Connected user infos
 var uinfos;
 
-// Prompt global configuration
-prompt.message = '';
-prompt.delimiter = '';
-prompt.colors = false;
-
 // storage configuration
 storage.init({
   stringify: JSON.stringify,
@@ -26,13 +20,9 @@ storage.init({
   encoding: 'utf8',
   ttl: false
 }).then(() => {
-  storage.getItem('uinfos').then(function(infos) {
-    if (infos && infos.meta && infos.meta.token) {
-      trainline.TOKEN = infos.meta.token;
-      trainline.USER_ID = infos.user.id;
-      uinfos = infos;
-      console.log(colors.yellow('Welcome ' + uinfos.user.first_name + ' ' + uinfos.user.last_name + '!'));
-    }
+  storage.getItem('uinfos').then(infos => {
+    uinfos = infos;
+    loadUserInfos();
     main();
   });
 });
@@ -57,48 +47,31 @@ function menu() {
         { name: "Search for a trip", value: searchForTrips },
         { name: "Pay for a trip in my basket", value: buyFromBasket },
         { name: "Consult my booked trips", value: consultBookedTrips },
-        { name: "Logout", value: "logout" },
+        { name: "Logout", value: logout },
       ],
       pageSize: 20
     }
   ]).then(choice => {
     let selection = choice.menu;
     return selection();
-  }).then(menu);
+  }).then(() => {
+    if (uinfos) {
+      return menu();
+    }
+  });
 }
 
 function main() {
   // Login
   if (program.login) {
-    prompt.start();
-    prompt.get({
-      properties: {
-        password: {
-          hidden: true,
-          description: "Trainline password:"
-        }
-      }
-    }, function (err, result) {
-      if (err || !result || !result.password) {
-        console.log('Please enter your password');
-        return;
-      }
-      trainline.connexion(program.login, result.password).then(infos => {
-        uinfos = infos;
-        return storage.setItem('uinfos', infos);
-      }).then(() => {
-        console.log(colors.blue('You are now connected as ' + uinfos.user.first_name + ' ' + uinfos.user.last_name + '!'));
-      }).catch(err => {
-        console.log(colors.red('Wrong password or wrong email address'));
-      });
-    });
+    login(program.login);
     return;
   }
 
   // The following actions need a user to be connected
   if (!uinfos) {
-    console.log('You are not connected. Use --login [email]');
-    return;
+    console.log('First you need to login to your Trainline account');
+    return login().then(main);
   }
 
   // Logout
@@ -128,8 +101,50 @@ function main() {
   menu();
 }
 
+function loadUserInfos() {
+  if (uinfos && uinfos.meta && uinfos.meta.token) {
+    trainline.TOKEN = uinfos.meta.token;
+    trainline.USER_ID = uinfos.user.id;
+
+    // console.log(uinfos.user);
+    console.log(colors.yellow('Welcome ' + uinfos.user.first_name + ' ' + uinfos.user.last_name + '!'));
+  }
+}
+
+function login(email) {
+  let questions = [];
+  if (!email) {
+    questions.push({
+      type: 'input',
+      name: 'email',
+      message: 'Email address:'
+    });
+  }
+  questions.push({
+    type: 'password',
+    name: 'password',
+    message: 'Trainline password:'
+  });
+  return inquirer.prompt(questions).then(answers => {
+    if (!answers.password) {
+      console.log('Please enter your password');
+      return;
+    }
+    let login = email || answers.email;
+    return trainline.connexion(login, answers.password);
+  }).then(infos => {
+    uinfos = infos;
+    return storage.setItem('uinfos', infos);
+  }).then(() => {
+    loadUserInfos();
+  }).catch(err => {
+    console.log(colors.red('Wrong password or wrong email address'));
+  });
+}
+
 function logout() {
-  storage.removeItem('uinfos').then(() => {
+  return storage.removeItem('uinfos').then(() => {
+    uinfos = null;
     console.log('You are now disconnected');
   });
 }
