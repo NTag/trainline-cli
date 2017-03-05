@@ -122,7 +122,7 @@ function main() {
           pageSize: 20
         }
       ]).then(answers => {
-        finalPnrs = answers;
+        finalPnrs = answers.pnrs;
         // Now we will select the right pnrs and unselect the other
         let pnrsToChange = [];
         let selectedPnrs = answers.pnrs.map(pnr => { return pnr.pnr_id });
@@ -136,7 +136,7 @@ function main() {
           }
         });
 
-        return new Promise((resolve, reject) => {
+        let pnrsq = new Promise((resolve, reject) => {
           let i = 0;
           // Trainline seems not to accept changing too fast multiple pnrs
           // So I do it sequentially
@@ -150,8 +150,35 @@ function main() {
           }
           selectNextPnr();
         });
-      }).then(() => {
-
+        return Promise.all([trainline.payment_cards(), pnrsq]);
+      }).then(qs => {
+        let payment_cards = qs[0].payment_cards.map(c => {
+          return {
+            name: c.label + ' (' + c.type + ' xxxx xxxx xxxx ' + c.last_digits + ')',
+            value: c.id
+          }
+        });
+        return inquirer.prompt([
+          {
+            type: 'list',
+            name: 'card',
+            message: 'Credit card:',
+            choices: payment_cards,
+            pageSize: 4
+          },
+          {
+            type: 'password',
+            name: 'cvv',
+            message: 'CVV:'
+          },
+          {
+            type: 'confirm',
+            name: 'confirm',
+            message: "Do you confirm the payment of " + finalPnrs.length + " tickets for " + finalPnrs.reduce((acc, pnr) => { return acc + pnr.cents }, 0)/100 + ' EUR?'
+          }
+        ]);
+      }).then(answers => {
+        console.log(answers);
       });
     });
   }

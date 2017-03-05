@@ -229,4 +229,12 @@ trainline.selectPnr = function(pnr_id, is_selected) {
   });
 };
 
+/**
+ * Return the payment cards registered
+ * @return Promise
+ */
+trainline.payment_cards = function() {
+  return apiRequest('payment_cards');
+};
+
 module.exports = trainline;
