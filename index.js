@@ -160,7 +160,9 @@ function logout() {
  * Consult booked trips
  */
 function consultBookedTrips() {
+  let spinner = startSpinner();
   return trainline.trips().then(trips => {
+    spinner.stop(true);
     console.log(tripsToTable(trips.slice(0, 7)));
   });
 }
@@ -170,6 +172,7 @@ function consultBookedTrips() {
  */
 function searchForTrips() {
   let dates = getNextDays(90);
+  let spinner;
 
   return inquirer.prompt([
     {
@@ -222,6 +225,8 @@ function searchForTrips() {
       })
     }
   ]).then(answers => {
+    spinner = startSpinner();
+
     // We need to find the ids of the selected stations
     let sq1 = trainline.searchStation(answers.from);
     let sq2 = trainline.searchStation(answers.to);
@@ -268,6 +273,8 @@ style: { 'padding-left': 0, 'padding-right': 0 }, colWidths: [20, 100] });
       choices.push(new inquirer.Separator());
     });
 
+    spinner.stop(true);
+
     return inquirer.prompt([
       {
         type: 'list',
@@ -301,8 +308,10 @@ style: { 'padding-left': 0, 'padding-right': 0 }, colWidths: [20, 100] });
       return Promise.resolve({tobook: travel_classes[Object.keys(travel_classes)[0]].tobook});
     }
   }).then(trip => {
+    spinner = startSpinner();
     return trainline.bookTrip(trip.tobook.search_id, trip.tobook.folder_id);
   }).then(result => {
+    spinner.stop(true);
     displaySuccess('Your trip has been added to your basket!');
   });
 }
@@ -313,6 +322,9 @@ style: { 'padding-left': 0, 'padding-right': 0 }, colWidths: [20, 100] });
  */
 function buyFromBasket() {
   let finalPnrs, trips;
+
+  let spinner = startSpinner();
+
   return trainline.basket().then(tripso => {
     trips = tripso;
     let choices = [];
@@ -326,6 +338,7 @@ function buyFromBasket() {
       });
       choices.push(new inquirer.Separator());
     });
+    spinner.stop(true);
     return inquirer.prompt([
       {
         type: 'checkbox',
@@ -336,6 +349,8 @@ function buyFromBasket() {
       }
     ])
   }).then(answers => {
+    spinner = startSpinner();
+
     finalPnrs = answers.pnrs;
     // Now we will select the right pnrs and unselect the other
     let pnrsToChange = [];
@@ -372,6 +387,9 @@ function buyFromBasket() {
         value: c.id
       }
     });
+
+    spinner.stop(true);
+
     return inquirer.prompt([
       {
         type: 'list',
@@ -400,8 +418,10 @@ function buyFromBasket() {
       displayError('The CVV must have three characters.');
       return Promise.reject();
     }
+    spinner = startSpinner();
     return trainline.payForPnrs(answers.card, answers.cvv, finalPnrs);
   }).then(payment => {
+    spinner.stop(true);
     if (payment.payment.status != 'success') {
       displayError('An error occurred. Please check your card and CVV.');
       return;
@@ -599,4 +619,11 @@ function s(n) {
     return 's';
   }
   return '';
+}
+
+function startSpinner() {
+  let spinner = new Spinner('%s');
+  spinner.setSpinnerString(0);
+  spinner.start();
+  return spinner;
 }
