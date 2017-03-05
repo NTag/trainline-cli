@@ -7,6 +7,7 @@
   "author": "Basile Bruneau <basilebruneau@gmail.com>",
   "license": "GPL-2.0",
   "dependencies": {
+    "cli-spinner": "^0.2.6",
     "cli-table2": "^0.2.0",
     "colors": "^1.1.2",
     "commander": "^2.9.0",
