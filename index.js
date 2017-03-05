@@ -47,6 +47,26 @@ program
   .option('-b, --basket', 'List of your options')
   .parse(process.argv);
 
+function menu() {
+  inquirer.prompt([
+    {
+      type: 'list',
+      name: 'menu',
+      message: 'What do you want to do:',
+      choices: [
+        { name: "Search for a trip", value: searchForTrips },
+        { name: "Pay for a trip in my basket", value: buyFromBasket },
+        { name: "Consult my booked trips", value: consultBookedTrips },
+        { name: "Logout", value: "logout" },
+      ],
+      pageSize: 20
+    }
+  ]).then(choice => {
+    let selection = choice.menu;
+    return selection();
+  }).then(menu);
+}
+
 function main() {
   // Login
   if (program.login) {
@@ -83,254 +103,282 @@ function main() {
 
   // Logout
   if (program.logout) {
-    storage.removeItem('uinfos').then(() => {
-      console.log('You are now disconnected');
-    });
+    logout();
   }
 
   if (program.trips) {
-    console.log('List of your trips');
-    trainline.trips().then(trips => {
-      console.log(tripsToTable(trips.slice(0, 7)));
-    });
+    consultBookedTrips();
   }
 
   if (program.basket) {
-    console.log('Content of your basket');
     trainline.basket().then(trips => {
       console.log(tripsToTable(trips));
     });
   }
 
   if (program.buy) {
-    trainline.basket().then(trips => {
-      let finalPnrs;
-      let choices = tripsToArrayOfTables(trips, true, '   ').map(trip => {
-        return {
-          name: trip.forDisplay,
-          checked: trip.details.is_selected,
-          value: trip.details,
-          short: trip.short
-        }
-      });
-      inquirer.prompt([
-        {
-          type: 'checkbox',
-          name: 'pnrs',
-          message: 'Select your trips:',
-          choices: choices,
-          pageSize: 20
-        }
-      ]).then(answers => {
-        finalPnrs = answers.pnrs;
-        // Now we will select the right pnrs and unselect the other
-        let pnrsToChange = [];
-        let selectedPnrs = answers.pnrs.map(pnr => { return pnr.pnr_id });
-        trips.forEach(trip => {
-          let isSelected = (selectedPnrs.indexOf(trip.pnr_id) > -1);
-          if ((trip.is_selected && !isSelected) || (!trip.is_selected && isSelected)) {
-            pnrsToChange.push({
-              pnr_id: trip.pnr_id,
-              is_selected: isSelected
-            });
-          }
-        });
-
-        let pnrsq = new Promise((resolve, reject) => {
-          let i = 0;
-          // Trainline seems not to accept changing too fast multiple pnrs
-          // So I do it sequentially
-          function selectNextPnr() {
-            if (i >= pnrsToChange.length) {
-              return resolve();
-            }
-            let pnr = pnrsToChange[i];
-            i++;
-            trainline.selectPnr(pnr.pnr_id, pnr.is_selected).then(selectNextPnr);
-          }
-          selectNextPnr();
-        });
-        return Promise.all([trainline.paymentCards(), pnrsq]);
-      }).then(qs => {
-        let payment_cards = qs[0].payment_cards.map(c => {
-          return {
-            name: c.label + ' (' + c.type + ' xxxx xxxx xxxx ' + c.last_digits + ')',
-            value: c.id
-          }
-        });
-        return inquirer.prompt([
-          {
-            type: 'list',
-            name: 'card',
-            message: 'Credit card:',
-            choices: payment_cards,
-            pageSize: 4
-          },
-          {
-            type: 'password',
-            name: 'cvv',
-            message: 'CVV:'
-          },
-          {
-            type: 'confirm',
-            name: 'confirm',
-            message: "Do you confirm the payment of " + finalPnrs.length + " tickets for " + finalPnrs.reduce((acc, pnr) => { return acc + pnr.cents }, 0)/100 + ' EUR?'
-          }
-        ]);
-      }).then(answers => {
-        if (!answers.confirm) {
-          console.log('Abort');
-          return;
-        }
-        return trainline.payForPnrs(answers.card, answers.cvv, finalPnrs);
-      }).then(payment => {
-        if (payment.payment.status != 'success') {
-          console.log(colors.red('An error occured. Please check your card and CVV.'));
-          return;
-        }
-        console.log(colors.yellow('The payment succeed, your trips have been booked! You should receive an email in a minute.'))
-      });
-    });
+    buyFromBasket();
   }
 
   if (program.search) {
-    let dates = getNextDays(90);
+    searchForTrips().then(menu);
+  }
 
-    inquirer.prompt([
-      {
-        type: 'autocomplete',
-        name: 'from',
-        suggestOnly: false,
-        message: 'From:',
-        source: searchStation,
-        pageSize: 5
+  // If no specific action specified, display the menu
+  menu();
+}
+
+function logout() {
+  storage.removeItem('uinfos').then(() => {
+    console.log('You are now disconnected');
+  });
+}
+
+/**
+ * Consult booked trips
+ */
+function consultBookedTrips() {
+  return trainline.trips().then(trips => {
+    console.log(tripsToTable(trips.slice(0, 7)));
+  });
+}
+
+/**
+ * Interactive session for searching for train tickets
+ */
+function searchForTrips() {
+  let dates = getNextDays(90);
+
+  return inquirer.prompt([
+    {
+      type: 'autocomplete',
+      name: 'from',
+      suggestOnly: false,
+      message: 'From:',
+      source: searchStation,
+      pageSize: 5
+    },
+    {
+      type: 'autocomplete',
+      name: 'to',
+      suggestOnly: false,
+      message: 'To:',
+      source: searchStation,
+      pageSize: 5
+    },
+    {
+      type: 'autocomplete',
+      name: 'departure_date',
+      suggestOnly: false,
+      message: 'Departure date:',
+      source: (answers, input) => {
+        return Promise.resolve(fuzzy.filter(input || '', dates).map(e => { return e.string }));
       },
-      {
-        type: 'autocomplete',
-        name: 'to',
-        suggestOnly: false,
-        message: 'To:',
-        source: searchStation,
-        pageSize: 5
-      },
-      {
-        type: 'autocomplete',
-        name: 'departure_date',
-        suggestOnly: false,
-        message: 'Departure date:',
-        source: (answers, input) => {
-          return Promise.resolve(fuzzy.filter(input || '', dates).map(e => { return e.string }));
-        },
-        pageSize: 5
-      },
+      pageSize: 5
+    },
+    {
+      type: 'list',
+      name: 'hour',
+      message: 'Time:',
+      choices: ['14h', '16h', '18h', '20h', '22h', '6h', '8h', '10h', '12h']
+    },
+    {
+      type: 'checkbox',
+      name: 'passengers',
+      message: 'Passengers:',
+      choices: uinfos.passengers.map(passenger => {
+        return {
+          checked: passenger.is_selected,
+          name: passenger.first_name + ' ' + passenger.last_name,
+          value: {
+            id: passenger.id,
+            card_ids: passenger.card_ids
+          }
+        }
+      }).sort((a, b) => {
+        return a.checked;
+      })
+    }
+  ]).then(answers => {
+    // We need to find the ids of the selected stations
+    let sq1 = trainline.searchStation(answers.from);
+    let sq2 = trainline.searchStation(answers.to);
+    return Promise.all([answers, sq1, sq2]);
+  }).then(queries => {
+    let answers = queries[0];
+    let departure_station_id = queries[1][0].id;
+    let arrival_station_id = queries[2][0].id;
+    let departure_date = moment(colors.strip(answers.departure_date) + ' ' + answers.hour, 'dddd, MMMM D H[h]').format();
+    let passengers = answers.passengers;
+    let passenger_ids = passengers.map(p => { return p.id });
+    let card_ids = passengers.reduce((acc, p) => { return acc.concat(p.card_ids) }, []);
+
+    return trainline.searchTrips(departure_station_id, arrival_station_id, passenger_ids, card_ids, departure_date);
+  }).then(trips => {
+    trips = humanifyTrips(trips);
+    let choices = [];
+    choices.push(new inquirer.Separator());
+    trips.forEach(trip => {
+      let table = new Table({ chars: { 'top': '' , 'top-mid': '' , 'top-left': '' , 'top-right': ''
+       , 'bottom': '' , 'bottom-mid': '' , 'bottom-left': '' , 'bottom-right': ''
+       , 'left': '' , 'left-mid': '' , 'mid': '' , 'mid-mid': ''
+       , 'right': '' , 'right-mid': '' , 'middle': ' ' },
+style: { 'padding-left': 0, 'padding-right': 0 }, colWidths: [20, 100] });
+      let duration = formatDuration(moment(trip.arrival_date) - moment(trip.departure_date));
+      let departure_time = moment(trip.departure_date).format('HH:mm');
+      let arrival_time = moment(trip.arrival_date).format('HH:mm');
+      let price = trip.travel_classes.economy.cents/100;
+      if (trip.travel_classes.first) {
+        price += ' / ' + trip.travel_classes.first.cents/100;
+      }
+      price += ' ' + trip.travel_classes.economy.currency;
+      table.push([duration, departure_time + '  ' + trip.departure_station]);
+      trip.stops.forEach(stop => {
+        table.push(['  ', '      ' + formatDuration(stop.duration) + '  ' + stop.station]);
+      });
+      table.push(['  ' + price, '  ' + arrival_time + '  ' + trip.arrival_station]);
+
+      choices.push({
+        name: table.toString(),
+        value: trip.travel_classes,
+        short: trip.departure_station + ' ' + departure_time + ' > ' + arrival_time + ' ' + trip.arrival_station
+      });
+      choices.push(new inquirer.Separator());
+    });
+
+    return inquirer.prompt([
       {
         type: 'list',
-        name: 'hour',
-        message: 'Time:',
-        choices: ['14h', '16h', '18h', '20h', '22h', '6h', '8h', '10h', '12h']
-      },
-      {
-        type: 'checkbox',
-        name: 'passengers',
-        message: 'Passengers:',
-        choices: uinfos.passengers.map(passenger => {
-          return {
-            checked: passenger.is_selected,
-            name: passenger.first_name + ' ' + passenger.last_name,
-            value: {
-              id: passenger.id,
-              card_ids: passenger.card_ids
-            }
-          }
-        }).sort((a, b) => {
-          return a.checked;
-        })
+        name: 'trip',
+        message: 'Available trips:',
+        choices: choices,
+        pageSize: 20
       }
-    ]).then(answers => {
-      // We need to find the ids of the selected stations
-      let sq1 = trainline.searchStation(answers.from);
-      let sq2 = trainline.searchStation(answers.to);
-      return Promise.all([answers, sq1, sq2]);
-    }).then(queries => {
-      let answers = queries[0];
-      let departure_station_id = queries[1][0].id;
-      let arrival_station_id = queries[2][0].id;
-      let departure_date = moment(colors.strip(answers.departure_date) + ' ' + answers.hour, 'dddd, MMMM D H[h]').format();
-      let passengers = answers.passengers;
-      let passenger_ids = passengers.map(p => { return p.id });
-      let card_ids = passengers.reduce((acc, p) => { return acc.concat(p.card_ids) }, []);
-
-      return trainline.searchTrips(departure_station_id, arrival_station_id, passenger_ids, card_ids, departure_date);
-    }).then(trips => {
-      trips = humanifyTrips(trips);
-      let choices = [];
-      choices.push(new inquirer.Separator());
-      trips.forEach(trip => {
-        let table = new Table({ chars: { 'top': '' , 'top-mid': '' , 'top-left': '' , 'top-right': ''
-         , 'bottom': '' , 'bottom-mid': '' , 'bottom-left': '' , 'bottom-right': ''
-         , 'left': '' , 'left-mid': '' , 'mid': '' , 'mid-mid': ''
-         , 'right': '' , 'right-mid': '' , 'middle': ' ' },
-  style: { 'padding-left': 0, 'padding-right': 0 }, colWidths: [20, 100] });
-        let duration = formatDuration(moment(trip.arrival_date) - moment(trip.departure_date));
-        let departure_time = moment(trip.departure_date).format('HH:mm');
-        let arrival_time = moment(trip.arrival_date).format('HH:mm');
-        let price = trip.travel_classes.economy.cents/100;
-        if (trip.travel_classes.first) {
-          price += ' / ' + trip.travel_classes.first.cents/100;
-        }
-        price += ' ' + trip.travel_classes.economy.currency;
-        table.push([duration, departure_time + '  ' + trip.departure_station]);
-        trip.stops.forEach(stop => {
-          table.push(['  ', '      ' + formatDuration(stop.duration) + '  ' + stop.station]);
-        });
-        table.push(['  ' + price, '  ' + arrival_time + '  ' + trip.arrival_station]);
-
-        choices.push({
-          name: table.toString(),
-          value: trip.travel_classes,
-          short: trip.departure_station + ' ' + departure_time + ' > ' + arrival_time + ' ' + trip.arrival_station
-        });
-        choices.push(new inquirer.Separator());
-      });
-
+    ]);
+  }).then(answers => {
+    let travel_classes = answers.trip;
+    if (Object.keys(travel_classes).length > 1) {
       return inquirer.prompt([
         {
           type: 'list',
-          name: 'trip',
-          message: 'Available trips:',
-          choices: choices,
-          pageSize: 20
+          name: 'tobook',
+          message: 'Travel class:',
+          choices: [
+            {
+              name: 'Economy: ' + travel_classes.economy.cents/100 + ' ' + travel_classes.economy.currency,
+              value: travel_classes.economy.tobook
+            },
+            {
+              name: 'First: ' + travel_classes.first.cents/100 + ' ' + travel_classes.first.currency,
+              value: travel_classes.first.tobook
+            }
+          ]
         }
-      ]);
-    }).then(answers => {
-      let travel_classes = answers.trip;
-      if (Object.keys(travel_classes).length > 1) {
-        return inquirer.prompt([
-          {
-            type: 'list',
-            name: 'tobook',
-            message: 'Travel class:',
-            choices: [
-              {
-                name: 'Economy: ' + travel_classes.economy.cents/100 + ' ' + travel_classes.economy.currency,
-                value: travel_classes.economy.tobook
-              },
-              {
-                name: 'First: ' + travel_classes.first.cents/100 + ' ' + travel_classes.first.currency,
-                value: travel_classes.first.tobook
-              }
-            ]
-          }
-        ])
-      } else {
-        return Promise.resolve({tobook: travel_classes[Object.keys(travel_classes)[0]].tobook});
+      ])
+    } else {
+      return Promise.resolve({tobook: travel_classes[Object.keys(travel_classes)[0]].tobook});
+    }
+  }).then(trip => {
+    return trainline.bookTrip(trip.tobook.search_id, trip.tobook.folder_id);
+  }).then(result => {
+    console.log(colors.yellow('Your trip has been added to your basket!'));
+  });
+}
+
+/**
+ * Interactive session from selecting trips to buy in the basket,
+ * to paying for them
+ */
+function buyFromBasket() {
+  let finalPnrs, trips;
+  return trainline.basket().then(tripso => {
+    trips = tripso;
+    let choices = tripsToArrayOfTables(trips, true, '   ').map(trip => {
+      return {
+        name: trip.forDisplay,
+        checked: trip.details.is_selected,
+        value: trip.details,
+        short: trip.short
       }
-    }).then(trip => {
-      return trainline.bookTrip(trip.tobook.search_id, trip.tobook.folder_id);
-    }).then(result => {
-      console.log(colors.yellow('Your trip has been added to your basket!'));
     });
-  }
+    return inquirer.prompt([
+      {
+        type: 'checkbox',
+        name: 'pnrs',
+        message: 'Select your trips:',
+        choices: choices,
+        pageSize: 20
+      }
+    ])
+  }).then(answers => {
+    finalPnrs = answers.pnrs;
+    // Now we will select the right pnrs and unselect the other
+    let pnrsToChange = [];
+    let selectedPnrs = answers.pnrs.map(pnr => { return pnr.pnr_id });
+    trips.forEach(trip => {
+      let isSelected = (selectedPnrs.indexOf(trip.pnr_id) > -1);
+      if ((trip.is_selected && !isSelected) || (!trip.is_selected && isSelected)) {
+        pnrsToChange.push({
+          pnr_id: trip.pnr_id,
+          is_selected: isSelected
+        });
+      }
+    });
+
+    let pnrsq = new Promise((resolve, reject) => {
+      let i = 0;
+      // Trainline seems not to accept changing too fast multiple pnrs
+      // So I do it sequentially
+      function selectNextPnr() {
+        if (i >= pnrsToChange.length) {
+          return resolve();
+        }
+        let pnr = pnrsToChange[i];
+        i++;
+        trainline.selectPnr(pnr.pnr_id, pnr.is_selected).then(selectNextPnr);
+      }
+      selectNextPnr();
+    });
+    return Promise.all([trainline.paymentCards(), pnrsq]);
+  }).then(qs => {
+    let payment_cards = qs[0].payment_cards.map(c => {
+      return {
+        name: c.label + ' (' + c.type + ' xxxx xxxx xxxx ' + c.last_digits + ')',
+        value: c.id
+      }
+    });
+    return inquirer.prompt([
+      {
+        type: 'list',
+        name: 'card',
+        message: 'Credit card:',
+        choices: payment_cards,
+        pageSize: 4
+      },
+      {
+        type: 'password',
+        name: 'cvv',
+        message: 'CVV:'
+      },
+      {
+        type: 'confirm',
+        name: 'confirm',
+        message: "Do you confirm the payment of " + finalPnrs.length + " tickets for " + finalPnrs.reduce((acc, pnr) => { return acc + pnr.cents }, 0)/100 + ' EUR?'
+      }
+    ]);
+  }).then(answers => {
+    if (!answers.confirm) {
+      console.log('Abort');
+      return;
+    }
+    return trainline.payForPnrs(answers.card, answers.cvv, finalPnrs);
+  }).then(payment => {
+    if (payment.payment.status != 'success') {
+      console.log(colors.red('An error occured. Please check your card and CVV.'));
+      return;
+    }
+    console.log(colors.yellow('The payment succeed, your trips have been booked! You should receive an email in a minute.'))
+  });
 }
 
 /**
