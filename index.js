@@ -61,16 +61,27 @@ function menu() {
   });
 }
 
+let firstTime = true;
+
 function main() {
+  let firstTimeo = firstTime;
+  firstTime = false;
+
   // Login
   if (program.login) {
+    if (uinfos) {
+      displayError('You are already connected');
+      return;
+    }
     login(program.login);
     return;
   }
 
   // The following actions need a user to be connected
   if (!uinfos) {
-    displayInfo('First you need to login to your Trainline account');
+    if (firstTimeo) {
+      displayInfo('First you need to login to your Trainline account');
+    }
     return login().then(main);
   }
 
@@ -125,10 +136,6 @@ function login(email) {
     message: 'Trainline password:'
   });
   return inquirer.prompt(questions).then(answers => {
-    if (!answers.password) {
-      displayError('Please enter your password');
-      return;
-    }
     let login = email || answers.email;
     return trainline.connexion(login, answers.password);
   }).then(infos => {
@@ -383,7 +390,7 @@ function buyFromBasket() {
   }).then(answers => {
     if (!answers.confirm) {
       displayError('Aborting');
-      return;
+      return Promise.reject();
     }
     return trainline.payForPnrs(answers.card, answers.cvv, finalPnrs);
   }).then(payment => {
@@ -399,7 +406,7 @@ function buyFromBasket() {
     }
     m += 'been booked! You should receive an email in a minute.';
     displaySuccess(m);
-  });
+  }).catch(() => {});
 }
 
 /**
