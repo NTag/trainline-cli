@@ -48,6 +48,7 @@ function menu() {
         { name: 'Pay for a trip in my basket', value: buyFromBasket },
         { name: 'Consult my booked trips', value: consultBookedTrips },
         { name: 'Logout', value: logout },
+        { name: 'Exit', value: () => { return Promise.reject(); } },
       ],
       pageSize: 20
     }
@@ -58,7 +59,7 @@ function menu() {
     if (uinfos) {
       return menu();
     }
-  });
+  }).catch(() => {});
 }
 
 let firstTime = true;
@@ -70,7 +71,7 @@ function main() {
   // Login
   if (program.login) {
     if (uinfos) {
-      displayError('You are already connected');
+      displayError('You are already connected.');
       return;
     }
     login(program.login);
@@ -80,7 +81,7 @@ function main() {
   // The following actions need a user to be connected
   if (!uinfos) {
     if (firstTimeo) {
-      displayInfo('First you need to login to your Trainline account');
+      displayInfo('First you need to login to your Trainline account:');
     }
     return login().then(main);
   }
@@ -144,14 +145,14 @@ function login(email) {
   }).then(() => {
     loadUserInfos();
   }).catch(err => {
-    displayError('Wrong password or wrong email address');
+    displayError('Wrong password or wrong email address.');
   });
 }
 
 function logout() {
   return storage.removeItem('uinfos').then(() => {
     uinfos = null;
-    displayInfo('You are now disconnected');
+    displayInfo('You are now disconnected.');
   });
 }
 
@@ -245,24 +246,24 @@ function searchForTrips() {
        , 'left': '' , 'left-mid': '' , 'mid': '' , 'mid-mid': ''
        , 'right': '' , 'right-mid': '' , 'middle': ' ' },
 style: { 'padding-left': 0, 'padding-right': 0 }, colWidths: [20, 100] });
-      let duration = formatDuration(moment(trip.arrival_date) - moment(trip.departure_date));
-      let departure_time = moment(trip.departure_date).format('HH:mm');
-      let arrival_time = moment(trip.arrival_date).format('HH:mm');
+      let duration = colors.white(formatDuration(moment(trip.arrival_date) - moment(trip.departure_date)));
+      let departure_time = colors.green(moment(trip.departure_date).format('HH:mm'));
+      let arrival_time = colors.green(moment(trip.arrival_date).format('HH:mm'));
       let price = trip.travel_classes.economy.cents/100;
       if (trip.travel_classes.first) {
         price += ' / ' + trip.travel_classes.first.cents/100;
       }
       price += ' ' + trip.travel_classes.economy.currency;
-      table.push([duration, departure_time + '  ' + trip.departure_station]);
+      table.push([duration, departure_time + '  ' + colors.bold(trip.departure_station)]);
       trip.stops.forEach(stop => {
-        table.push(['  ', '      ' + formatDuration(stop.duration) + '  ' + stop.station]);
+        table.push(['  ', '      ' + colors.magenta(formatDuration(stop.duration) + '  ' + stop.station)]);
       });
-      table.push(['  ' + price, '  ' + arrival_time + '  ' + trip.arrival_station]);
+      table.push(['  ' + price, '  ' + arrival_time + '  ' + colors.bold(trip.arrival_station)]);
 
       choices.push({
         name: table.toString(),
         value: trip.travel_classes,
-        short: trip.departure_station + ' ' + departure_time + ' > ' + arrival_time + ' ' + trip.arrival_station
+        short: trip.departure_station + ' ' + colors.green(departure_time) + ' > ' + colors.green(arrival_time) + ' ' + trip.arrival_station
       });
       choices.push(new inquirer.Separator());
     });
@@ -314,13 +315,16 @@ function buyFromBasket() {
   let finalPnrs, trips;
   return trainline.basket().then(tripso => {
     trips = tripso;
-    let choices = tripsToArrayOfTables(trips, true, '   ').map(trip => {
-      return {
+    let choices = [];
+    choices.push(new inquirer.Separator());
+    tripsToArrayOfTables(trips, true, '   ').forEach(trip => {
+      choices.push({
         name: trip.forDisplay,
         checked: trip.details.is_selected,
         value: trip.details,
         short: trip.short
-      }
+      });
+      choices.push(new inquirer.Separator());
     });
     return inquirer.prompt([
       {
@@ -389,13 +393,17 @@ function buyFromBasket() {
     ]);
   }).then(answers => {
     if (!answers.confirm) {
-      displayError('Aborting');
+      displayError('Aborting.');
+      return Promise.reject();
+    }
+    if (!answers.cvv || answers.cvv.length != 3) {
+      displayError('The CVV must have three characters.');
       return Promise.reject();
     }
     return trainline.payForPnrs(answers.card, answers.cvv, finalPnrs);
   }).then(payment => {
     if (payment.payment.status != 'success') {
-      displayError('An error occured. Please check your card and CVV.');
+      displayError('An error occurred. Please check your card and CVV.');
       return;
     }
     let m = 'The payment was successful, your ';
@@ -406,7 +414,7 @@ function buyFromBasket() {
     }
     m += 'been booked! You should receive an email in a minute.';
     displaySuccess(m);
-  }).catch(() => {});
+  }).catch((err) => {});
 }
 
 /**
@@ -522,6 +530,8 @@ function tripsToArrayOfTables(trips, hideRef, offset) {
      style: { 'padding-left': 0, 'padding-right': 0 }
   });
 
+  trips.reverse();
+
   trips.forEach(trip => {
     let t = [];
 
@@ -531,18 +541,18 @@ function tripsToArrayOfTables(trips, hideRef, offset) {
     }
 
     // [TODO] Add hour?
-    let departure_date = moment(trip.departure_date).calendar();
-    let arrival_date = moment(trip.arrival_date).calendar();
+    let departure_date = colors.green(moment(trip.departure_date).format('ddd, MMM D HH:mm'));
+    let arrival_date = colors.green(moment(trip.arrival_date).format('ddd, MMM D HH:mm'));
     let date = departure_date;
     if (departure_date != arrival_date) {
       date += nl + arrival_date;
     }
 
-    let stations = trip.departure_station.name + nl + trip.arrival_station.name;
+    let stations = colors.bold(trip.departure_station.name + nl + trip.arrival_station.name);
 
     let passenger = trip.passenger.first_name;
 
-    let price = {hAlign: 'right', content: trip.cents/100 + ' ' + trip.currency};
+    let price = {hAlign: 'right', content: colors.yellow(trip.cents/100 + ' ' + trip.currency)};
 
     t = t.concat([date, stations, passenger, price]);
 
