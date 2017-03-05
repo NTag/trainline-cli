@@ -1,3 +1,5 @@
+'use strict';
+
 const request = require('request-promise');
 const API = 'https://www.trainline.eu/api/v5/';
 

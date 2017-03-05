@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-
+'use strict';
 const trainline = require('./trainline.js');
 const program = require('commander');
 const storage = require('node-persist');
