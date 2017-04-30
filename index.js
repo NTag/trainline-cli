@@ -551,8 +551,8 @@ function tripsToArrayOfTables(trips, hideRef, offset) {
       t.push(reference);
     }
 
-    let departure_date = colors.green(moment(trip.departure_date).format('ddd, MMM D HH:mm'));
-    let arrival_date = colors.green(moment(trip.arrival_date).format('ddd, MMM D HH:mm'));
+    let departure_date = colors.green(moment(trip.departure_date).format('ddd, MMM D YYYY HH:mm'));
+    let arrival_date = colors.green(moment(trip.arrival_date).format('ddd, MMM D YYYY HH:mm'));
     let date = departure_date;
     if (departure_date != arrival_date) {
       date += nl + arrival_date;
